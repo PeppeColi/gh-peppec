@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# gh peppec: runs the PEPPEC command line (cli/peppec of the engine) as a gh extension.
+# Each run downloads the CLI of the requested engine version (default v1), so the
+# extension itself never goes stale. Without a network the last downloaded copy is used.
+set -euo pipefail
+
+ENGINE="${PEPPEC_ENGINE:-PeppeColi/peppec}"
+REF="${PEPPEC_REF:-v1}"
+
+# The CLI takes --ref too: fetch the CLI of that same version
+prev=""
+for a in "$@"; do
+  [ "$prev" = "--ref" ] && REF="$a"
+  prev="$a"
+done
+
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/gh-peppec"
+mkdir -p "$cache_dir"
+cli="$cache_dir/peppec-$(printf '%s' "$ENGINE@$REF" | tr '/@' '__')"
+tmp=$(mktemp "$cache_dir/.peppec.XXXXXX")
+trap 'rm -f "$tmp"' EXIT
+
+if gh api -H "Accept: application/vnd.github.raw" "repos/$ENGINE/contents/cli/peppec?ref=$REF" > "$tmp" 2> /dev/null \
+   && bash -n "$tmp" 2> /dev/null; then
+  mv "$tmp" "$cli"
+elif [ -f "$cli" ]; then
+  printf '! could not download cli/peppec from %s@%s: using the copy downloaded earlier\n' "$ENGINE" "$REF" >&2
+else
+  printf 'x could not download cli/peppec from %s@%s (is gh signed in?)\n' "$ENGINE" "$REF" >&2
+  exit 1
+fi
+trap - EXIT
+
+export PEPPEC_ENGINE="$ENGINE" PEPPEC_REF="$REF" PEPPEC_LAUNCHER="gh peppec"
+exec bash "$cli" "$@"
