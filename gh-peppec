@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # gh peppec: runs the PEPPEC command line (cli/peppec of the engine) as a gh extension.
-# Each run downloads the CLI of the requested engine version (default v1), so the
+# Each run downloads the CLI of the requested engine version (default v2), so the
 # extension itself never goes stale. Without a network the last downloaded copy is used.
 set -euo pipefail
 
 ENGINE="${PEPPEC_ENGINE:-PeppeColi/peppec}"
-REF="${PEPPEC_REF:-v1}"
+REF="${PEPPEC_REF:-v2}"
 
 # The CLI takes --ref too: fetch the CLI of that same version
 prev=""
